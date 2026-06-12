@@ -1,0 +1,235 @@
+{
+  "scenes": [
+    {
+      "scene_number": 1,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character with a confused expression, wearing a simple t-shirt, holding an empty digital wallet.",
+            "action": "Looking intensely at a digital screen showing a shrinking bank balance icon."
+          }
+        ],
+        "environment": "Minimalist home setting with abstract floating icons of money vanishing.",
+        "lighting": "Cool blue tones with a red alert flashing on the screen.",
+        "composition": "Close-up shot on the character's face.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character rubs his head in frustration while numbers on the screen decrease rapidly.",
+        "camera_movement": "Slow zoom in on the character's face.",
+        "transition": "Hard cut"
+      },
+      "narration": "Tu cuenta bancaria disminuye cada mes y no sabes exactamente a dónde se fue todo."
+    },
+    {
+      "scene_number": 2,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character looking at a massive, messy pile of bills and receipts surrounding him.",
+            "action": "Pointing at a giant question mark floating above his head."
+          }
+        ],
+        "environment": "A cluttered room representing financial chaos.",
+        "lighting": "Dim, greyish tones highlighting the messy papers.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character gestures toward the mess, clearly overwhelmed.",
+        "camera_movement": "Pan across the room showing the pile of bills.",
+        "transition": "Hard cut"
+      },
+      "narration": "Es el problema del dinero invisible: gastos que se escapan sin control."
+    },
+    {
+      "scene_number": 3,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman holding a bag of money that has holes in the bottom, with coins dropping out.",
+            "action": "Walking forward while coins scatter behind him."
+          }
+        ],
+        "environment": "An abstract street path.",
+        "lighting": "Shadowy background with bright green coins hitting the floor.",
+        "composition": "Wide shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character walks steadily while coins fall rhythmically from his leaking bag.",
+        "camera_movement": "Tracking shot following the character.",
+        "transition": "Fade to black"
+      },
+      "narration": "El error común es gastar todo sin priorizar tu futuro primero."
+    },
+    {
+      "scene_number": 4,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman standing at a crossroads.",
+            "action": "Looking at a signpost that says 'Desorden Financiero' vs 'Control Total'."
+          }
+        ],
+        "environment": "Empty white space with a stylized road.",
+        "lighting": "Neutral bright lighting.",
+        "composition": "Eye-level shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character pauses and looks at both signs.",
+        "camera_movement": "Static shot.",
+        "transition": "Dissolve"
+      },
+      "narration": "Es hora de cambiar las reglas del juego."
+    },
+    {
+      "scene_number": 5,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character confidently presenting a large pie chart graphic.",
+            "action": "Pointing at the chart with a marker."
+          }
+        ],
+        "environment": "A clean, modern workspace background.",
+        "lighting": "Bright, clear studio lighting with vibrant colors.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character draws slices on the pie chart labeled 50, 30, and 20.",
+        "camera_movement": "Slow zoom in.",
+        "transition": "Hard cut"
+      },
+      "narration": "Te presento la regla 50, 30, 20."
+    },
+    {
+      "scene_number": 6,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character with a magnifying glass examining a segment marked 50%.",
+            "action": "Nodding in approval."
+          }
+        ],
+        "environment": "Floating text labels.",
+        "lighting": "Soft warm light.",
+        "composition": "Close-up.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The magnifying glass glides over the 50% slice.",
+        "camera_movement": "Pan across the chart.",
+        "transition": "Hard cut"
+      },
+      "narration": "El 50% es para tus necesidades básicas: vivienda, comida y servicios."
+    },
+    {
+      "scene_number": 7,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character with a smile, interacting with a thought bubble showing icons of a movie and coffee.",
+            "action": "Happily gesturing at the bubble."
+          }
+        ],
+        "environment": "Simple white background.",
+        "lighting": "Bright and cheerful.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character pats his pockets comfortably.",
+        "camera_movement": "Static shot.",
+        "transition": "Hard cut"
+      },
+      "narration": "El 30% es para tus deseos personales: ese café o el cine."
+    },
+    {
+      "scene_number": 8,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character placing gold coins into a growing digital piggy bank marked 20%.",
+            "action": "Dropping the last coin inside."
+          }
+        ],
+        "environment": "Bright glowing safe icon in the background.",
+        "lighting": "Golden highlights reflecting off the piggy bank.",
+        "composition": "Close-up.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The piggy bank shakes with each coin, growing slightly larger.",
+        "camera_movement": "Slow zoom in.",
+        "transition": "Hard cut"
+      },
+      "narration": "Y el 20% más importante: tu ahorro automático para el futuro."
+    },
+    {
+      "scene_number": 9,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character with a calendar, circling the 'Payday' date.",
+            "action": "Drawing a checkmark on the calendar."
+          }
+        ],
+        "environment": "Office desk.",
+        "lighting": "Bright white.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character checks off the date with excitement.",
+        "camera_movement": "Static shot.",
+        "transition": "Hard cut"
+      },
+      "narration": "Divide tu sueldo apenas lo recibas, no al final."
+    },
+    {
+      "scene_number": 10,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character standing tall, looking at a wall of successful financial growth charts.",
+            "action": "Looking forward with confidence."
+          }
+        ],
+        "environment": "A professional space.",
+        "lighting": "Warm, successful lighting.",
+        "composition": "Wide shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character stands firm as the charts glow green.",
+        "camera_movement": "Slow pan out.",
+        "transition": "Hard cut"
+      },
+      "narration": "La disciplina de hoy es tu libertad de mañana."
+    },
+    {
+      "scene_number": 11,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character with a thumbs up.",
+            "action": "Pointing at the screen as if speaking directly to the viewer."
+          }
+        ],
+        "environment": "Clear background.",
+        "lighting": "Bright and energetic.",
+        "composition": "Close-up.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "video_prompt": {
+        "motion": "The character winks and gives a thumbs up.",
+        "camera_movement": "Static shot.",
+        "transition": "Fade out"
+      },
+      "narration": "Empieza hoy mismo y toma el control de tu dinero. ¡Sígueme para más consejos!"
+    }
+  ]
+}

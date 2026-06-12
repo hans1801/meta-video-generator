@@ -1,54 +1,54 @@
 # Meta Video Generator
 
-Este proyecto es una extensión de Chrome desarrollada con [WXT](https://wxt.dev/) y React.
+This project is a Chrome extension developed with [WXT](https://wxt.dev/) and React.
 
-## Requisitos Previos
+## Prerequisites
 
 - Node.js
-- npm o pnpm
+- npm or pnpm
 
-## Instalación
+## Installation
 
-Instala las dependencias del proyecto ejecutando:
+Install the project dependencies by running:
 
 ```bash
 npm install
-# o
+# or
 pnpm install
 ```
 
-## Modo Desarrollo (Dev)
+## Development Mode (Dev)
 
-Para ejecutar el proyecto en modo de desarrollo y ver los cambios en tiempo real, simplemente ejecuta:
+To run the project in development mode and see changes in real-time, simply run:
 
 ```bash
 npm run dev
-# o
+# or
 pnpm run dev
 ```
 
-**¿Qué hace este comando?**
-- Inicia el servidor de desarrollo local con recarga en caliente (Hot Module Replacement).
-- **Abre automáticamente una nueva ventana del navegador** configurada como un perfil de prueba, con tu extensión ya instalada y lista para usarse. 
+**What does this command do?**
+- Starts the local development server with Hot Module Replacement (HMR).
+- **Automatically opens a new browser window** configured as a test profile, with your extension already installed and ready to use.
 
-*Nota: Si cierras el navegador de prueba, puedes presionar `o + enter` en la terminal donde se está ejecutando el script para volver a abrirlo.*
+*Note: If you close the test browser, you can press `o + enter` in the terminal where the script is running to open it again.*
 
-## Construcción y Carga Manual en Chrome
+## Build and Manual Load in Chrome
 
-Si deseas compilar la versión final de la extensión o instalarla en tu perfil de Chrome principal:
+If you want to compile the final version of the extension or install it in your main Chrome profile:
 
-1. Ejecuta el comando de construcción:
+1. Run the build command:
 
    ```bash
    npm run build
-   # o
+   # or
    pnpm run build
    ```
 
-2. Esto generará una carpeta llamada `.output/chrome-mv3` (o similar) en la raíz de tu proyecto.
-3. Abre tu navegador Chrome y ve a la dirección: `chrome://extensions/`
-4. Activa el **Modo de desarrollador** (interruptor en la esquina superior derecha).
-5. Haz clic en el botón **Cargar descomprimida** (Load unpacked) en la parte superior izquierda.
-6. Selecciona la carpeta `.output/chrome-mv3` que se acaba de generar.
+2. This will generate a folder named `.output/chrome-mv3` (or similar) in the root of your project.
+3. Open your Chrome browser and go to: `chrome://extensions/`
+4. Enable **Developer mode** (toggle in the top right corner).
+5. Click on the **Load unpacked** button in the top left.
+6. Select the `.output/chrome-mv3` folder that was just generated.
 
-¡Listo! La extensión ahora estará instalada en tu navegador principal.
+Done! The extension will now be installed in your main browser.

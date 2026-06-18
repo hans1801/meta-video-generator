@@ -487,6 +487,9 @@ export default function App() {
           )}
         </main>
       )}
+      <footer style={{ textAlign: 'center', fontSize: 10, color: '#35354a', paddingBottom: 8 }}>
+        v{browser.runtime.getManifest().version}
+      </footer>
     </div>
   );
 }

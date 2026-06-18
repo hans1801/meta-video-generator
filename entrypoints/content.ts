@@ -25,11 +25,7 @@ export default defineContentScript({
 
           if (inputDiv && prompt) {
             (inputDiv as HTMLElement).focus();
-            const success = document.execCommand('insertText', false, prompt);
-            if (!success) {
-              inputDiv.textContent = prompt;
-              inputDiv.dispatchEvent(new Event('input', { bubbles: true }));
-            }
+            document.execCommand('insertText', false, prompt);
           }
 
           const getCompletedVideos = () =>
@@ -54,7 +50,7 @@ export default defineContentScript({
                   const newVideosCount = currentVideos.length - initialVideoCount;
 
                   for (let i = 0; i < newVideosCount; i++) {
-                    const videoEl = currentVideos[i] as HTMLVideoElement;
+                    const videoEl = currentVideos[initialVideoCount + i] as HTMLVideoElement;
                     const videoUrl =
                       videoEl.src ||
                       videoEl.closest('[data-testid="generated-video"]')?.getAttribute('data-video-url') ||

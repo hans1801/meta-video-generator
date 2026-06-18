@@ -12,6 +12,7 @@ interface BatchState {
   currentIndex: number;
   sceneStatuses: Record<number, 'pending' | 'processing' | 'done' | 'error'>;
   metaAiTabId: number;
+  pendingWrite: { sceneNumber: number; url: string } | null;
 }
 
 export interface BatchStatus {
@@ -21,10 +22,25 @@ export interface BatchStatus {
   totalScenes: number;
   sceneNumbers: number[];
   sceneStatuses: Record<number, 'pending' | 'processing' | 'done' | 'error'>;
+  pendingWrite: { sceneNumber: number; url: string } | null;
 }
 
 let batch: BatchState | null = null;
-let pendingDownload: { sceneNumber: number; projectName: string } | null = null;
+let popupTabId: number | null = null;
+
+async function ensurePopupTab() {
+  if (popupTabId !== null) {
+    try {
+      await browser.tabs.get(popupTabId);
+      return;
+    } catch {
+      popupTabId = null;
+    }
+  }
+  const popupUrl = browser.runtime.getURL('/popup.html');
+  const tab = await browser.tabs.create({ url: popupUrl, active: false });
+  popupTabId = tab.id ?? null;
+}
 
 function getStatus(): BatchStatus | null {
   if (!batch) return null;
@@ -35,6 +51,7 @@ function getStatus(): BatchStatus | null {
     totalScenes: batch.scenes.length,
     sceneNumbers: batch.scenes.map(s => s.sceneNumber),
     sceneStatuses: { ...batch.sceneStatuses },
+    pendingWrite: batch.pendingWrite,
   };
 }
 
@@ -71,7 +88,6 @@ async function processScene(index: number) {
     if (!response?.success) {
       throw new Error(response?.error ?? 'fill_prompt failed');
     }
-    // Content script is now polling; download event will trigger next step
   } catch (err) {
     await browser.alarms.clear('scene_timeout');
     if (batch) {
@@ -83,10 +99,18 @@ async function processScene(index: number) {
   }
 }
 
+function advanceAfterWrite(sceneNumber: number) {
+  if (!batch) return;
+  batch.pendingWrite = null;
+  batch.sceneStatuses[sceneNumber] = 'done';
+  broadcastStatus();
+  const nextIdx = batch.currentIndex + 1;
+  setTimeout(() => { if (batch?.active) processScene(nextIdx); }, 3000);
+}
+
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'start_batch') {
-      pendingDownload = null;
       batch = {
         active: true,
         projectName: message.projectName,
@@ -94,8 +118,9 @@ export default defineBackground(() => {
         currentIndex: 0,
         sceneStatuses: {},
         metaAiTabId: message.metaAiTabId,
+        pendingWrite: null,
       };
-      processScene(0);
+      ensurePopupTab().then(() => processScene(0));
       sendResponse({ ok: true });
       return false;
     }
@@ -113,8 +138,22 @@ export default defineBackground(() => {
       return false;
     }
 
-    if (message.action === 'set_pending_download') {
-      pendingDownload = { sceneNumber: message.sceneNumber, projectName: message.projectName };
+    if (message.action === 'download_video_direct') {
+      const { url, sceneNumber } = message;
+      browser.alarms.clear('scene_timeout');
+
+      if (batch && batch.active) {
+        batch.pendingWrite = { sceneNumber, url };
+        broadcastStatus();
+      }
+      return false;
+    }
+
+    if (message.action === 'write_done') {
+      const { sceneNumber } = message;
+      if (batch?.pendingWrite?.sceneNumber === sceneNumber) {
+        advanceAfterWrite(sceneNumber);
+      }
       return false;
     }
 
@@ -132,32 +171,4 @@ export default defineBackground(() => {
       }
     }
   });
-
-  chrome.downloads.onDeterminingFilename.addListener(
-    (downloadItem: chrome.downloads.DownloadItem, suggest: (suggestion?: chrome.downloads.FilenameSuggestion) => void) => {
-      if (
-        pendingDownload &&
-        (downloadItem.mime?.startsWith('video/') ||
-          downloadItem.filename.endsWith('.mp4') ||
-          downloadItem.filename.endsWith('.webm'))
-      ) {
-        const { sceneNumber, projectName } = pendingDownload;
-        pendingDownload = null;
-
-        suggest({
-          filename: `${projectName}/videos/scene_${sceneNumber}.mp4`,
-          conflictAction: 'overwrite',
-        });
-
-        browser.alarms.clear('scene_timeout');
-
-        if (batch && batch.active) {
-          batch.sceneStatuses[sceneNumber] = 'done';
-          broadcastStatus();
-          const nextIdx = batch.currentIndex + 1;
-          setTimeout(() => { if (batch?.active) processScene(nextIdx); }, 3000);
-        }
-      }
-    }
-  );
 });

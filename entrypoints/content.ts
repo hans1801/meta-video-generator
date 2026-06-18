@@ -54,27 +54,19 @@ export default defineContentScript({
                   const newVideosCount = currentVideos.length - initialVideoCount;
 
                   for (let i = 0; i < newVideosCount; i++) {
-                    const videoEl = currentVideos[i];
-                    let container: HTMLElement | null = videoEl.parentElement;
-                    for (let j = 0; j < 8; j++) {
-                      if (container?.querySelector('button[aria-label="Download"]')) break;
-                      container = container?.parentElement ?? null;
-                    }
+                    const videoEl = currentVideos[i] as HTMLVideoElement;
+                    const videoUrl =
+                      videoEl.src ||
+                      videoEl.closest('[data-testid="generated-video"]')?.getAttribute('data-video-url') ||
+                      '';
 
-                    if (container) {
-                      const downloadBtn = container.querySelector(
-                        'button[aria-label="Download"]:not([disabled])'
-                      ) as HTMLButtonElement | null;
-                      if (downloadBtn) {
-                        if (sceneNumber !== undefined && projectName) {
-                          await browser.runtime.sendMessage({
-                            action: 'set_pending_download',
-                            sceneNumber,
-                            projectName,
-                          });
-                        }
-                        downloadBtn.click();
-                      }
+                    if (videoUrl && sceneNumber !== undefined && projectName) {
+                      await browser.runtime.sendMessage({
+                        action: 'download_video_direct',
+                        url: videoUrl,
+                        sceneNumber,
+                        projectName,
+                      });
                     }
                   }
                 } else if (attempts >= maxAttempts) {

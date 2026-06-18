@@ -3,6 +3,26 @@ import './App.css';
 
 declare function showDirectoryPicker(options?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>;
 
+function openHandleDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('meta-video-gen', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function storeProjectHandle(handle: FileSystemDirectoryHandle) {
+  const db = await openHandleDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(handle, 'projectDir');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
 type Mode = 'single' | 'project';
 type Status = { type: 'idle' | 'loading' | 'success' | 'error'; message?: string };
 
@@ -33,6 +53,7 @@ interface BatchStatus {
   totalScenes: number;
   sceneNumbers: number[];
   sceneStatuses: Record<number, 'pending' | 'processing' | 'done' | 'error'>;
+  pendingWrite: { sceneNumber: number; url: string } | null;
 }
 
 function buildMetaPrompt(scene: SceneData): string {
@@ -67,17 +88,60 @@ export default function App() {
   const [loadingImages, setLoadingImages] = useState(false);
   const [setupStatus, setSetupStatus] = useState('');
   const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
+  const grantedHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  async function processWrite(pw: { sceneNumber: number; url: string }) {
+    const handle = grantedHandleRef.current;
+    if (!handle) return;
+    try {
+      const resp = await fetch(pw.url);
+      if (!resp.ok) return;
+      const blob = await resp.blob();
+      const videosDir = await handle.getDirectoryHandle('videos', { create: true });
+      const fh = await videosDir.getFileHandle(`scene_${pw.sceneNumber}.mp4`, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      browser.runtime.sendMessage({ action: 'write_done', sceneNumber: pw.sceneNumber }).catch(() => {});
+    } catch { /* write failed, batch stays on pendingWrite */ }
+  }
 
   // Fetch batch status on mount and listen for live updates from background
   useEffect(() => {
-    browser.runtime.sendMessage({ action: 'get_batch_status' })
-      .then((s: BatchStatus | null) => {
-        if (s) { setBatchStatus(s); if (s.active) setMode('project'); }
-      })
-      .catch(() => {});
+    (async () => {
+      // Re-grant permission for stored handle (popup open = user gesture context)
+      try {
+        const db = await openHandleDB();
+        const handle = await new Promise<FileSystemDirectoryHandle | null>(res => {
+          const tx = db.transaction('handles', 'readonly');
+          const req = tx.objectStore('handles').get('projectDir');
+          req.onsuccess = () => { db.close(); res(req.result ?? null); };
+          req.onerror = () => { db.close(); res(null); };
+        });
+        if (handle) {
+          const perm = await (handle as FileSystemDirectoryHandle & {
+            requestPermission(opts: { mode: string }): Promise<string>;
+          }).requestPermission({ mode: 'readwrite' });
+          if (perm === 'granted') grantedHandleRef.current = handle;
+        }
+      } catch { /* no stored handle or permission denied */ }
+
+      // Now get batch status and process any pending write
+      try {
+        const s = await browser.runtime.sendMessage({ action: 'get_batch_status' }) as BatchStatus | null;
+        if (s) {
+          setBatchStatus(s);
+          if (s.active) setMode('project');
+          if (s.pendingWrite) processWrite(s.pendingWrite);
+        }
+      } catch { /* background not available */ }
+    })();
 
     const listener = (msg: { action: string; status: BatchStatus }) => {
-      if (msg.action === 'batch_status') setBatchStatus(msg.status);
+      if (msg.action !== 'batch_status') return;
+      setBatchStatus(msg.status);
+      const pw = msg.status?.pendingWrite;
+      if (pw) processWrite(pw);
     };
     browser.runtime.onMessage.addListener(
       listener as Parameters<typeof browser.runtime.onMessage.addListener>[0]
@@ -150,9 +214,11 @@ export default function App() {
 
   const selectFolder = async () => {
     try {
-      const handle = await showDirectoryPicker({ mode: 'read' });
+      const handle = await showDirectoryPicker({ mode: 'readwrite' });
       setProjectHandle(handle);
       setProjectName(handle.name);
+      grantedHandleRef.current = handle;
+      await storeProjectHandle(handle);
       setSetupStatus('');
       const scriptFile = await (await handle.getFileHandle('script.json')).getFile();
       const { scenes: scenesData } = JSON.parse(await scriptFile.text()) as { scenes: SceneData[] };

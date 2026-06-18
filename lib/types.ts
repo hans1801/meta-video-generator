@@ -8,7 +8,14 @@ export const Actions = {
   BatchStatus: 'batch_status',
 } as const;
 
-export type SceneStatus = 'pending' | 'processing' | 'done' | 'error';
+export const SceneStatuses = {
+  Pending: 'pending',
+  Processing: 'processing',
+  Done: 'done',
+  Error: 'error',
+} as const;
+
+export type SceneStatus = (typeof SceneStatuses)[keyof typeof SceneStatuses];
 
 export interface SceneInput {
   sceneNumber: number;
@@ -43,6 +50,7 @@ export interface StartBatchMessage {
   projectName: string;
   scenes: SceneInput[];
   metaAiTabId: number;
+  preCompletedSceneNumbers: number[];
 }
 
 export interface StopBatchMessage {

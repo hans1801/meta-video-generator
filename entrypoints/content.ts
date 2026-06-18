@@ -54,7 +54,7 @@ export default defineContentScript({
                     const newVideosCount = currentVideos.length - initialVideoCount;
 
                     for (let i = 0; i < newVideosCount; i++) {
-                      const videoEl = currentVideos[initialVideoCount + i] as HTMLVideoElement;
+                      const videoEl = currentVideos[i] as HTMLVideoElement;
                       const videoUrl =
                         videoEl.src ||
                         videoEl

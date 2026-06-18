@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Actions } from '../../lib/types';
 import type { BatchStatus, BatchStatusMessage } from '../../lib/types';
 import { openHandleDB } from './utils';
+import { ProjectDirs, sceneVideoName } from '../../lib/constants';
 import SingleMode from './SingleMode/SingleMode';
 import BatchMode from './BatchMode/BatchMode';
 import {
@@ -29,8 +30,8 @@ export default function App() {
       const resp = await fetch(pw.url);
       if (!resp.ok) return;
       const blob = await resp.blob();
-      const videosDir = await handle.getDirectoryHandle('videos', { create: true });
-      const fh = await videosDir.getFileHandle(`scene_${pw.sceneNumber}.mp4`, { create: true });
+      const videosDir = await handle.getDirectoryHandle(ProjectDirs.Videos, { create: true });
+      const fh = await videosDir.getFileHandle(sceneVideoName(pw.sceneNumber), { create: true });
       const writable = await fh.createWritable();
       await writable.write(blob);
       await writable.close();

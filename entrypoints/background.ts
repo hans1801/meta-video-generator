@@ -1,4 +1,4 @@
-import { Actions } from '../lib/types';
+import { Actions, SceneStatuses } from '../lib/types';
 import type { SceneStatus, BatchStatus, SceneInput, ExtensionMessage } from '../lib/types';
 
 export type { BatchStatus };
@@ -7,6 +7,7 @@ interface BatchState {
   active: boolean;
   projectName: string;
   scenes: SceneInput[];
+  allSceneNumbers: number[];
   currentIndex: number;
   sceneStatuses: Record<number, SceneStatus>;
   metaAiTabId: number;
@@ -36,8 +37,8 @@ function getStatus(): BatchStatus | null {
     active: batch.active,
     projectName: batch.projectName,
     currentIndex: batch.currentIndex,
-    totalScenes: batch.scenes.length,
-    sceneNumbers: batch.scenes.map((s) => s.sceneNumber),
+    totalScenes: batch.allSceneNumbers.length,
+    sceneNumbers: batch.allSceneNumbers,
     sceneStatuses: { ...batch.sceneStatuses },
     pendingWrite: batch.pendingWrite,
   };
@@ -57,7 +58,7 @@ async function processScene(index: number) {
 
   batch.currentIndex = index;
   const scene = batch.scenes[index];
-  batch.sceneStatuses[scene.sceneNumber] = 'processing';
+  batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Processing;
   broadcastStatus();
 
   await browser.alarms.clear('scene_timeout');
@@ -79,7 +80,7 @@ async function processScene(index: number) {
   } catch {
     await browser.alarms.clear('scene_timeout');
     if (batch) {
-      batch.sceneStatuses[scene.sceneNumber] = 'error';
+      batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Error;
       broadcastStatus();
       const nextIdx = index + 1;
       setTimeout(() => {
@@ -92,7 +93,7 @@ async function processScene(index: number) {
 function advanceAfterWrite(sceneNumber: number) {
   if (!batch) return;
   batch.pendingWrite = null;
-  batch.sceneStatuses[sceneNumber] = 'done';
+  batch.sceneStatuses[sceneNumber] = SceneStatuses.Done;
   broadcastStatus();
   const nextIdx = batch.currentIndex + 1;
   setTimeout(() => {
@@ -103,12 +104,19 @@ function advanceAfterWrite(sceneNumber: number) {
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
     if (message.action === Actions.StartBatch) {
+      const preCompleted = message.preCompletedSceneNumbers;
+      const initialStatuses: Record<number, SceneStatus> = {};
+      for (const n of preCompleted) initialStatuses[n] = SceneStatuses.Done;
+
       batch = {
         active: true,
         projectName: message.projectName,
         scenes: message.scenes,
+        allSceneNumbers: [...preCompleted, ...message.scenes.map((s) => s.sceneNumber)].sort(
+          (a, b) => a - b
+        ),
         currentIndex: 0,
-        sceneStatuses: {},
+        sceneStatuses: initialStatuses,
         metaAiTabId: message.metaAiTabId,
         pendingWrite: null,
       };
@@ -155,8 +163,8 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'scene_timeout' && batch?.active) {
       const scene = batch.scenes[batch.currentIndex];
-      if (scene && batch.sceneStatuses[scene.sceneNumber] === 'processing') {
-        batch.sceneStatuses[scene.sceneNumber] = 'error';
+      if (scene && batch.sceneStatuses[scene.sceneNumber] === SceneStatuses.Processing) {
+        batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Error;
         broadcastStatus();
         const nextIdx = batch.currentIndex + 1;
         setTimeout(() => {

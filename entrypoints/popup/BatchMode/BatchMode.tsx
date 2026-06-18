@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Actions } from '../../../lib/types';
+import { Actions, SceneStatuses } from '../../../lib/types';
 import type { BatchStatus, SceneInput } from '../../../lib/types';
 import { storeProjectHandle, fileToDataUrl } from '../utils';
+import {
+  ProjectDirs,
+  ProjectFiles,
+  sceneImageName,
+  SCENE_VIDEO_PATTERN,
+  VIDEO_PROMPT_PREFIX,
+} from '../../../lib/constants';
 import { Main, GenerateBtn, Spinner, AbortBtn, StatusMessage } from '../App.styled';
 import {
   ProjectHeader,
@@ -36,7 +43,21 @@ interface SceneData {
 function buildMetaPrompt(scene: SceneData): string {
   const { video_prompt: vid } = scene;
   const clean = (s?: string) => s?.replace(/\.$/, '').trim() ?? '';
-  return `Animate this image. ${clean(vid.motion)} ${clean(vid.camera_movement)}`;
+  return `${VIDEO_PROMPT_PREFIX} ${clean(vid.motion)} ${clean(vid.camera_movement)}`;
+}
+
+async function readCompletedScenes(handle: FileSystemDirectoryHandle): Promise<Set<number>> {
+  const completed = new Set<number>();
+  try {
+    const videosDir = await handle.getDirectoryHandle(ProjectDirs.Videos);
+    for await (const [name] of videosDir as unknown as AsyncIterable<[string, FileSystemHandle]>) {
+      const match = name.match(SCENE_VIDEO_PATTERN);
+      if (match) completed.add(parseInt(match[1]));
+    }
+  } catch {
+    /* videos dir doesn't exist yet */
+  }
+  return completed;
 }
 
 interface Props {
@@ -48,13 +69,15 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
   const [projectHandle, setProjectHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [projectName, setProjectName] = useState('');
   const [batchScenes, setBatchScenes] = useState<SceneData[]>([]);
+  const [completedScenes, setCompletedScenes] = useState<Set<number>>(new Set());
   const [loadingImages, setLoadingImages] = useState(false);
   const [setupStatus, setSetupStatus] = useState('');
 
   const isBatchActive = batchStatus?.active === true;
   const doneCount = batchStatus
-    ? Object.values(batchStatus.sceneStatuses).filter((s) => s === 'done').length
+    ? Object.values(batchStatus.sceneStatuses).filter((s) => s === SceneStatuses.Done).length
     : 0;
+  const pendingScenes = batchScenes.filter((s) => !completedScenes.has(s.scene_number));
 
   const selectFolder = async () => {
     try {
@@ -64,9 +87,13 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
       grantedHandleRef.current = handle;
       await storeProjectHandle(handle);
       setSetupStatus('');
-      const scriptFile = await (await handle.getFileHandle('script.json')).getFile();
-      const { scenes: scenesData } = JSON.parse(await scriptFile.text()) as { scenes: SceneData[] };
+
+      const scriptFile = await (await handle.getFileHandle(ProjectFiles.Script)).getFile();
+      const { scenes: scenesData } = JSON.parse(await scriptFile.text()) as {
+        scenes: SceneData[];
+      };
       setBatchScenes(scenesData);
+      setCompletedScenes(await readCompletedScenes(handle));
     } catch (err: unknown) {
       if ((err as DOMException)?.name !== 'AbortError') {
         setSetupStatus('No se pudo leer la carpeta del proyecto.');
@@ -75,7 +102,7 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
   };
 
   const startBatch = async () => {
-    if (!projectHandle || batchScenes.length === 0) return;
+    if (!projectHandle || pendingScenes.length === 0) return;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) {
       setSetupStatus('Abre meta.ai en la pestaña activa primero.');
@@ -85,26 +112,32 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
     setLoadingImages(true);
     setSetupStatus('Cargando imágenes...');
     try {
-      const imagesDir = await projectHandle.getDirectoryHandle('images');
+      const imagesDir = await projectHandle.getDirectoryHandle(ProjectDirs.Images);
       const sceneData: SceneInput[] = await Promise.all(
-        batchScenes.map(async (scene) => {
+        pendingScenes.map(async (scene) => {
           const f = await (
-            await imagesDir.getFileHandle(`scene_${scene.scene_number}.png`)
+            await imagesDir.getFileHandle(sceneImageName(scene.scene_number))
           ).getFile();
           const imageBase64 = await fileToDataUrl(f);
           return {
             sceneNumber: scene.scene_number,
             imageBase64,
-            imageName: `scene_${scene.scene_number}.png`,
+            imageName: sceneImageName(scene.scene_number),
             videoPrompt: buildMetaPrompt(scene),
           };
         })
       );
+      const pendingNums = new Set(pendingScenes.map((s) => s.scene_number));
+      const preCompletedSceneNumbers = batchScenes
+        .map((s) => s.scene_number)
+        .filter((n) => !pendingNums.has(n));
+
       await browser.runtime.sendMessage({
         action: Actions.StartBatch,
         projectName,
         scenes: sceneData,
         metaAiTabId: tab.id,
+        preCompletedSceneNumbers,
       });
       setSetupStatus('');
     } catch (err: unknown) {
@@ -144,11 +177,11 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
         <SceneGrid>
           {batchStatus!.sceneNumbers.map((n) => (
             <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus!.sceneStatuses[n]}>
-              {batchStatus!.sceneStatuses[n] === 'processing'
+              {batchStatus!.sceneStatuses[n] === SceneStatuses.Processing
                 ? '⏳'
-                : batchStatus!.sceneStatuses[n] === 'done'
+                : batchStatus!.sceneStatuses[n] === SceneStatuses.Done
                   ? '✓'
-                  : batchStatus!.sceneStatuses[n] === 'error'
+                  : batchStatus!.sceneStatuses[n] === SceneStatuses.Error
                     ? '✗'
                     : '·'}
             </SceneCell>
@@ -169,26 +202,36 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
 
       {batchScenes.length > 0 && (
         <>
-          <ScenesCount>{batchScenes.length} escenas listas</ScenesCount>
+          <ScenesCount>
+            {pendingScenes.length} pendientes · {completedScenes.size} ya generadas
+          </ScenesCount>
           <SceneGrid>
             {batchScenes.map((s) => (
-              <SceneCell key={s.scene_number} title={`Escena ${s.scene_number}`}>
-                ·
+              <SceneCell
+                key={s.scene_number}
+                title={`Escena ${s.scene_number}`}
+                $status={completedScenes.has(s.scene_number) ? SceneStatuses.Done : undefined}
+              >
+                {completedScenes.has(s.scene_number) ? '✓' : '·'}
               </SceneCell>
             ))}
           </SceneGrid>
-          <GenerateBtn onClick={startBatch} disabled={loadingImages}>
-            {loadingImages ? (
-              <Spinner />
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
-              </svg>
-            )}
-            {loadingImages
-              ? 'Cargando imágenes...'
-              : `▶ Iniciar batch (${batchScenes.length} escenas)`}
-          </GenerateBtn>
+          {pendingScenes.length > 0 ? (
+            <GenerateBtn onClick={startBatch} disabled={loadingImages}>
+              {loadingImages ? (
+                <Spinner />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                  <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+                </svg>
+              )}
+              {loadingImages
+                ? 'Cargando imágenes...'
+                : `Continuar batch (${pendingScenes.length} pendientes)`}
+            </GenerateBtn>
+          ) : (
+            <StatusMessage $type="success">Todas las escenas ya están generadas ✓</StatusMessage>
+          )}
         </>
       )}
 
@@ -200,11 +243,11 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
           <SceneGrid>
             {batchStatus.sceneNumbers.map((n) => (
               <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus.sceneStatuses[n]}>
-                {batchStatus.sceneStatuses[n] === 'processing'
+                {batchStatus.sceneStatuses[n] === SceneStatuses.Processing
                   ? '⏳'
-                  : batchStatus.sceneStatuses[n] === 'done'
+                  : batchStatus.sceneStatuses[n] === SceneStatuses.Done
                     ? '✓'
-                    : batchStatus.sceneStatuses[n] === 'error'
+                    : batchStatus.sceneStatuses[n] === SceneStatuses.Error
                       ? '✗'
                       : '·'}
               </SceneCell>

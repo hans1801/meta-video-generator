@@ -1,4 +1,5 @@
 import styled, { css } from 'styled-components';
+import { SceneStatuses } from '../../../lib/types';
 import type { SceneStatus } from '../../../lib/types';
 
 export const ProjectHeader = styled.div`
@@ -84,21 +85,21 @@ export const SceneCell = styled.div<{ $status?: SceneStatus }>`
       border-color: #2a2a3a;
     `}
   ${({ $status }) =>
-    $status === 'processing' &&
+    $status === SceneStatuses.Processing &&
     css`
       background: #2a2a10;
       color: #e0c060;
       border-color: #3a3a10;
     `}
   ${({ $status }) =>
-    $status === 'done' &&
+    $status === SceneStatuses.Done &&
     css`
       background: #1a4028;
       color: #60d080;
       border-color: #1a5035;
     `}
   ${({ $status }) =>
-    $status === 'error' &&
+    $status === SceneStatuses.Error &&
     css`
       background: #3a1020;
       color: #f08090;

@@ -1,3 +1,7 @@
+import type { SceneStatus, BatchStatus } from '../lib/types';
+
+export type { BatchStatus };
+
 interface SceneData {
   sceneNumber: number;
   imageBase64: string;
@@ -10,18 +14,8 @@ interface BatchState {
   projectName: string;
   scenes: SceneData[];
   currentIndex: number;
-  sceneStatuses: Record<number, 'pending' | 'processing' | 'done' | 'error'>;
+  sceneStatuses: Record<number, SceneStatus>;
   metaAiTabId: number;
-  pendingWrite: { sceneNumber: number; url: string } | null;
-}
-
-export interface BatchStatus {
-  active: boolean;
-  projectName: string;
-  currentIndex: number;
-  totalScenes: number;
-  sceneNumbers: number[];
-  sceneStatuses: Record<number, 'pending' | 'processing' | 'done' | 'error'>;
   pendingWrite: { sceneNumber: number; url: string } | null;
 }
 

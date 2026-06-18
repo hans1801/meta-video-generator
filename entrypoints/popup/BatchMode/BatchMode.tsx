@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { BatchStatus } from '../../../lib/types';
+import { Actions } from '../../../lib/types';
+import type { BatchStatus, SceneInput } from '../../../lib/types';
 import { storeProjectHandle, fileToDataUrl } from '../utils';
 import { Main, GenerateBtn, Spinner, AbortBtn, StatusMessage } from '../App.styled';
 import {
@@ -20,7 +21,9 @@ import {
   BatchNote,
 } from './BatchMode.styled';
 
-declare function showDirectoryPicker(options?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>;
+declare function showDirectoryPicker(options?: {
+  mode?: 'read' | 'readwrite';
+}): Promise<FileSystemDirectoryHandle>;
 
 interface SceneData {
   scene_number: number;
@@ -28,13 +31,6 @@ interface SceneData {
     motion: string;
     camera_movement: string;
   };
-}
-
-interface BatchSceneInput {
-  sceneNumber: number;
-  imageBase64: string;
-  imageName: string;
-  videoPrompt: string;
 }
 
 function buildMetaPrompt(scene: SceneData): string {
@@ -57,7 +53,7 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
 
   const isBatchActive = batchStatus?.active === true;
   const doneCount = batchStatus
-    ? Object.values(batchStatus.sceneStatuses).filter(s => s === 'done').length
+    ? Object.values(batchStatus.sceneStatuses).filter((s) => s === 'done').length
     : 0;
 
   const selectFolder = async () => {
@@ -81,15 +77,20 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
   const startBatch = async () => {
     if (!projectHandle || batchScenes.length === 0) return;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) { setSetupStatus('Abre meta.ai en la pestaña activa primero.'); return; }
+    if (!tab?.id) {
+      setSetupStatus('Abre meta.ai en la pestaña activa primero.');
+      return;
+    }
 
     setLoadingImages(true);
     setSetupStatus('Cargando imágenes...');
     try {
       const imagesDir = await projectHandle.getDirectoryHandle('images');
-      const sceneData: BatchSceneInput[] = await Promise.all(
-        batchScenes.map(async scene => {
-          const f = await (await imagesDir.getFileHandle(`scene_${scene.scene_number}.png`)).getFile();
+      const sceneData: SceneInput[] = await Promise.all(
+        batchScenes.map(async (scene) => {
+          const f = await (
+            await imagesDir.getFileHandle(`scene_${scene.scene_number}.png`)
+          ).getFile();
           const imageBase64 = await fileToDataUrl(f);
           return {
             sceneNumber: scene.scene_number,
@@ -100,20 +101,23 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
         })
       );
       await browser.runtime.sendMessage({
-        action: 'start_batch',
+        action: Actions.StartBatch,
         projectName,
         scenes: sceneData,
         metaAiTabId: tab.id,
       });
       setSetupStatus('');
     } catch (err: unknown) {
-      setSetupStatus('Error cargando imágenes: ' + (err instanceof Error ? err.message : String(err)));
+      setSetupStatus(
+        'Error cargando imágenes: ' + (err instanceof Error ? err.message : String(err))
+      );
     } finally {
       setLoadingImages(false);
     }
   };
 
-  const stopBatch = () => browser.runtime.sendMessage({ action: 'stop_batch' }).catch(() => {});
+  const stopBatch = () =>
+    browser.runtime.sendMessage({ action: Actions.StopBatch }).catch(() => {});
 
   if (isBatchActive) {
     return (
@@ -122,7 +126,8 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
           <ProjectInfo>
             <ProjectTitle>{batchStatus!.projectName}</ProjectTitle>
             <ProjectCount>
-              Escena {batchStatus!.currentIndex + 1} / {batchStatus!.totalScenes} · {doneCount} listas
+              Escena {batchStatus!.currentIndex + 1} / {batchStatus!.totalScenes} · {doneCount}{' '}
+              listas
             </ProjectCount>
           </ProjectInfo>
         </ProjectHeader>
@@ -131,16 +136,21 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
           <ProgressBarTrack>
             <ProgressBarFill $pct={(doneCount / batchStatus!.totalScenes) * 100} />
           </ProgressBarTrack>
-          <ProgressLabel>{doneCount}/{batchStatus!.totalScenes}</ProgressLabel>
+          <ProgressLabel>
+            {doneCount}/{batchStatus!.totalScenes}
+          </ProgressLabel>
         </ProgressBarWrap>
 
         <SceneGrid>
-          {batchStatus!.sceneNumbers.map(n => (
+          {batchStatus!.sceneNumbers.map((n) => (
             <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus!.sceneStatuses[n]}>
-              {batchStatus!.sceneStatuses[n] === 'processing' ? '⏳'
-                : batchStatus!.sceneStatuses[n] === 'done' ? '✓'
-                : batchStatus!.sceneStatuses[n] === 'error' ? '✗'
-                : '·'}
+              {batchStatus!.sceneStatuses[n] === 'processing'
+                ? '⏳'
+                : batchStatus!.sceneStatuses[n] === 'done'
+                  ? '✓'
+                  : batchStatus!.sceneStatuses[n] === 'error'
+                    ? '✗'
+                    : '·'}
             </SceneCell>
           ))}
         </SceneGrid>
@@ -161,17 +171,23 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
         <>
           <ScenesCount>{batchScenes.length} escenas listas</ScenesCount>
           <SceneGrid>
-            {batchScenes.map(s => (
-              <SceneCell key={s.scene_number} title={`Escena ${s.scene_number}`}>·</SceneCell>
+            {batchScenes.map((s) => (
+              <SceneCell key={s.scene_number} title={`Escena ${s.scene_number}`}>
+                ·
+              </SceneCell>
             ))}
           </SceneGrid>
           <GenerateBtn onClick={startBatch} disabled={loadingImages}>
-            {loadingImages ? <Spinner /> : (
+            {loadingImages ? (
+              <Spinner />
+            ) : (
               <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
                 <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
               </svg>
             )}
-            {loadingImages ? 'Cargando imágenes...' : `▶ Iniciar batch (${batchScenes.length} escenas)`}
+            {loadingImages
+              ? 'Cargando imágenes...'
+              : `▶ Iniciar batch (${batchScenes.length} escenas)`}
           </GenerateBtn>
         </>
       )}
@@ -182,12 +198,15 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
             Último: {batchStatus.projectName} · {doneCount}/{batchStatus.totalScenes} completados
           </LastBatchLabel>
           <SceneGrid>
-            {batchStatus.sceneNumbers.map(n => (
+            {batchStatus.sceneNumbers.map((n) => (
               <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus.sceneStatuses[n]}>
-                {batchStatus.sceneStatuses[n] === 'processing' ? '⏳'
-                  : batchStatus.sceneStatuses[n] === 'done' ? '✓'
-                  : batchStatus.sceneStatuses[n] === 'error' ? '✗'
-                  : '·'}
+                {batchStatus.sceneStatuses[n] === 'processing'
+                  ? '⏳'
+                  : batchStatus.sceneStatuses[n] === 'done'
+                    ? '✓'
+                    : batchStatus.sceneStatuses[n] === 'error'
+                      ? '✗'
+                      : '·'}
               </SceneCell>
             ))}
           </SceneGrid>

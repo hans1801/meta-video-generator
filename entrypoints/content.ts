@@ -1,3 +1,6 @@
+import { Actions } from '../lib/types';
+import type { ExtensionMessage, ContentResponse } from '../lib/types';
+
 function dataURLtoFile(dataurl: string, filename: string) {
   const arr = dataurl.split(',');
   const mimeMatch = arr[0].match(/:(.*?);/);
@@ -14,89 +17,96 @@ function dataURLtoFile(dataurl: string, filename: string) {
 export default defineContentScript({
   matches: ['*://*.meta.ai/*', '*://meta.ai/*'],
   main() {
-    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.action === 'fill_prompt') {
-        const { prompt, imageData, fileName, sceneNumber, projectName } = message;
+    browser.runtime.onMessage.addListener(
+      (message: ExtensionMessage, _sender, sendResponse: (r: ContentResponse) => void) => {
+        if (message.action === Actions.FillPrompt) {
+          const { prompt, imageData, fileName, sceneNumber, projectName } = message;
 
-        const attachAndSend = () => {
-          const inputDiv = document.querySelector(
-            '[data-testid="composer-input"][contenteditable="true"]'
-          );
+          const attachAndSend = () => {
+            const inputDiv = document.querySelector(
+              '[data-testid="composer-input"][contenteditable="true"]'
+            );
 
-          if (inputDiv && prompt) {
-            (inputDiv as HTMLElement).focus();
-            document.execCommand('insertText', false, prompt);
-          }
-
-          const getCompletedVideos = () =>
-            document.querySelectorAll('[data-testid="generated-video"] video');
-          const initialVideoCount = getCompletedVideos().length;
-
-          setTimeout(() => {
-            const sendBtn = document.querySelector('[data-testid="composer-send-button"]');
-            if (sendBtn) {
-              (sendBtn as HTMLButtonElement).click();
-              sendResponse({ success: true, message: 'Sent! Waiting for video...' });
-
-              let attempts = 0;
-              const maxAttempts = 150;
-
-              const interval = setInterval(async () => {
-                attempts++;
-                const currentVideos = getCompletedVideos();
-
-                if (currentVideos.length > initialVideoCount) {
-                  clearInterval(interval);
-                  const newVideosCount = currentVideos.length - initialVideoCount;
-
-                  for (let i = 0; i < newVideosCount; i++) {
-                    const videoEl = currentVideos[initialVideoCount + i] as HTMLVideoElement;
-                    const videoUrl =
-                      videoEl.src ||
-                      videoEl.closest('[data-testid="generated-video"]')?.getAttribute('data-video-url') ||
-                      '';
-
-                    if (videoUrl && sceneNumber !== undefined && projectName) {
-                      await browser.runtime.sendMessage({
-                        action: 'download_video_direct',
-                        url: videoUrl,
-                        sceneNumber,
-                        projectName,
-                      });
-                    }
-                  }
-                } else if (attempts >= maxAttempts) {
-                  clearInterval(interval);
-                }
-              }, 2000);
-            } else {
-              sendResponse({ success: false, error: 'Prompt written, but send button not found.' });
+            if (inputDiv && prompt) {
+              (inputDiv as HTMLElement).focus();
+              document.execCommand('insertText', false, prompt);
             }
-          }, 500);
-        };
 
-        if (imageData) {
-          const file = dataURLtoFile(imageData, fileName || 'upload.png');
-          const fileInput = document.querySelector(
-            'input[type="file"][accept*="image"]'
-          ) as HTMLInputElement | null;
+            const getCompletedVideos = () =>
+              document.querySelectorAll('[data-testid="generated-video"] video');
+            const initialVideoCount = getCompletedVideos().length;
 
-          if (fileInput) {
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            fileInput.files = dataTransfer.files;
-            const event = new Event('change', { bubbles: true });
-            fileInput.dispatchEvent(event);
-            setTimeout(attachAndSend, 1500);
+            setTimeout(() => {
+              const sendBtn = document.querySelector('[data-testid="composer-send-button"]');
+              if (sendBtn) {
+                (sendBtn as HTMLButtonElement).click();
+                sendResponse({ success: true, message: 'Sent! Waiting for video...' });
+
+                let attempts = 0;
+                const maxAttempts = 150;
+
+                const interval = setInterval(async () => {
+                  attempts++;
+                  const currentVideos = getCompletedVideos();
+
+                  if (currentVideos.length > initialVideoCount) {
+                    clearInterval(interval);
+                    const newVideosCount = currentVideos.length - initialVideoCount;
+
+                    for (let i = 0; i < newVideosCount; i++) {
+                      const videoEl = currentVideos[initialVideoCount + i] as HTMLVideoElement;
+                      const videoUrl =
+                        videoEl.src ||
+                        videoEl
+                          .closest('[data-testid="generated-video"]')
+                          ?.getAttribute('data-video-url') ||
+                        '';
+
+                      if (videoUrl && sceneNumber !== undefined && projectName) {
+                        await browser.runtime.sendMessage({
+                          action: Actions.DownloadVideoDirect,
+                          url: videoUrl,
+                          sceneNumber,
+                          projectName,
+                        });
+                      }
+                    }
+                  } else if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                  }
+                }, 2000);
+              } else {
+                sendResponse({
+                  success: false,
+                  error: 'Prompt written, but send button not found.',
+                });
+              }
+            }, 500);
+          };
+
+          if (imageData) {
+            const file = dataURLtoFile(imageData, fileName || 'upload.png');
+            const fileInput = document.querySelector(
+              'input[type="file"][accept*="image"]'
+            ) as HTMLInputElement | null;
+
+            if (fileInput) {
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              fileInput.files = dataTransfer.files;
+              const event = new Event('change', { bubbles: true });
+              fileInput.dispatchEvent(event);
+              setTimeout(attachAndSend, 1500);
+            } else {
+              sendResponse({ success: false, error: 'File input not found on page.' });
+            }
           } else {
-            sendResponse({ success: false, error: 'File input not found on page.' });
+            attachAndSend();
           }
-        } else {
-          attachAndSend();
-        }
 
-        return true;
+          return true;
+        }
       }
-    });
+    );
   },
 });

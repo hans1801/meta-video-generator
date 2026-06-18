@@ -76,18 +76,34 @@ export const SceneCell = styled.div<{ $status?: SceneStatus }>`
   border-radius: 4px;
   border: 1px solid transparent;
 
-  ${({ $status }) => !$status && css`
-    background: #1e1e2e; color: #55556a; border-color: #2a2a3a;
-  `}
-  ${({ $status }) => $status === 'processing' && css`
-    background: #2a2a10; color: #e0c060; border-color: #3a3a10;
-  `}
-  ${({ $status }) => $status === 'done' && css`
-    background: #1a4028; color: #60d080; border-color: #1a5035;
-  `}
-  ${({ $status }) => $status === 'error' && css`
-    background: #3a1020; color: #f08090; border-color: #4a1a30;
-  `}
+  ${({ $status }) =>
+    !$status &&
+    css`
+      background: #1e1e2e;
+      color: #55556a;
+      border-color: #2a2a3a;
+    `}
+  ${({ $status }) =>
+    $status === 'processing' &&
+    css`
+      background: #2a2a10;
+      color: #e0c060;
+      border-color: #3a3a10;
+    `}
+  ${({ $status }) =>
+    $status === 'done' &&
+    css`
+      background: #1a4028;
+      color: #60d080;
+      border-color: #1a5035;
+    `}
+  ${({ $status }) =>
+    $status === 'error' &&
+    css`
+      background: #3a1020;
+      color: #f08090;
+      border-color: #4a1a30;
+    `}
 `;
 
 export const FolderSelectBtn = styled.button`
@@ -103,8 +119,13 @@ export const FolderSelectBtn = styled.button`
   width: 100%;
   transition: background 0.15s;
 
-  &:hover:not(:disabled) { background: #1d1d28; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    background: #1d1d28;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 export const ScenesCount = styled.div`

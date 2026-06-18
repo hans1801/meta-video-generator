@@ -1,18 +1,12 @@
-import type { SceneStatus, BatchStatus } from '../lib/types';
+import { Actions } from '../lib/types';
+import type { SceneStatus, BatchStatus, SceneInput, ExtensionMessage } from '../lib/types';
 
 export type { BatchStatus };
-
-interface SceneData {
-  sceneNumber: number;
-  imageBase64: string;
-  imageName: string;
-  videoPrompt: string;
-}
 
 interface BatchState {
   active: boolean;
   projectName: string;
-  scenes: SceneData[];
+  scenes: SceneInput[];
   currentIndex: number;
   sceneStatuses: Record<number, SceneStatus>;
   metaAiTabId: number;
@@ -43,14 +37,14 @@ function getStatus(): BatchStatus | null {
     projectName: batch.projectName,
     currentIndex: batch.currentIndex,
     totalScenes: batch.scenes.length,
-    sceneNumbers: batch.scenes.map(s => s.sceneNumber),
+    sceneNumbers: batch.scenes.map((s) => s.sceneNumber),
     sceneStatuses: { ...batch.sceneStatuses },
     pendingWrite: batch.pendingWrite,
   };
 }
 
 function broadcastStatus() {
-  browser.runtime.sendMessage({ action: 'batch_status', status: getStatus() }).catch(() => {});
+  browser.runtime.sendMessage({ action: Actions.BatchStatus, status: getStatus() }).catch(() => {});
 }
 
 async function processScene(index: number) {
@@ -71,7 +65,7 @@ async function processScene(index: number) {
 
   try {
     const response = await browser.tabs.sendMessage(batch.metaAiTabId, {
-      action: 'fill_prompt',
+      action: Actions.FillPrompt,
       prompt: scene.videoPrompt,
       imageData: scene.imageBase64,
       fileName: scene.imageName,
@@ -82,13 +76,15 @@ async function processScene(index: number) {
     if (!response?.success) {
       throw new Error(response?.error ?? 'fill_prompt failed');
     }
-  } catch (err) {
+  } catch {
     await browser.alarms.clear('scene_timeout');
     if (batch) {
       batch.sceneStatuses[scene.sceneNumber] = 'error';
       broadcastStatus();
       const nextIdx = index + 1;
-      setTimeout(() => { if (batch?.active) processScene(nextIdx); }, 3000);
+      setTimeout(() => {
+        if (batch?.active) processScene(nextIdx);
+      }, 3000);
     }
   }
 }
@@ -99,12 +95,14 @@ function advanceAfterWrite(sceneNumber: number) {
   batch.sceneStatuses[sceneNumber] = 'done';
   broadcastStatus();
   const nextIdx = batch.currentIndex + 1;
-  setTimeout(() => { if (batch?.active) processScene(nextIdx); }, 3000);
+  setTimeout(() => {
+    if (batch?.active) processScene(nextIdx);
+  }, 3000);
 }
 
 export default defineBackground(() => {
-  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.action === 'start_batch') {
+  browser.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+    if (message.action === Actions.StartBatch) {
       batch = {
         active: true,
         projectName: message.projectName,
@@ -119,7 +117,7 @@ export default defineBackground(() => {
       return false;
     }
 
-    if (message.action === 'stop_batch') {
+    if (message.action === Actions.StopBatch) {
       if (batch) batch.active = false;
       browser.alarms.clear('scene_timeout');
       broadcastStatus();
@@ -127,12 +125,12 @@ export default defineBackground(() => {
       return false;
     }
 
-    if (message.action === 'get_batch_status') {
+    if (message.action === Actions.GetBatchStatus) {
       sendResponse(getStatus());
       return false;
     }
 
-    if (message.action === 'download_video_direct') {
+    if (message.action === Actions.DownloadVideoDirect) {
       const { url, sceneNumber } = message;
       browser.alarms.clear('scene_timeout');
 
@@ -143,7 +141,7 @@ export default defineBackground(() => {
       return false;
     }
 
-    if (message.action === 'write_done') {
+    if (message.action === Actions.WriteDone) {
       const { sceneNumber } = message;
       if (batch?.pendingWrite?.sceneNumber === sceneNumber) {
         advanceAfterWrite(sceneNumber);
@@ -161,7 +159,9 @@ export default defineBackground(() => {
         batch.sceneStatuses[scene.sceneNumber] = 'error';
         broadcastStatus();
         const nextIdx = batch.currentIndex + 1;
-        setTimeout(() => { if (batch?.active) processScene(nextIdx); }, 1000);
+        setTimeout(() => {
+          if (batch?.active) processScene(nextIdx);
+        }, 1000);
       }
     }
   });

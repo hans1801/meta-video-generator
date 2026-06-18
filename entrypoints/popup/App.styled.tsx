@@ -54,15 +54,21 @@ export const ModeTab = styled.button<{ $active?: boolean }>`
   font-size: 12px;
   font-weight: 500;
   padding: 5px 10px;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   white-space: nowrap;
 
-  &:hover { color: #9090b0; }
+  &:hover {
+    color: #9090b0;
+  }
 
-  ${({ $active }) => $active && css`
-    background: #2a2a3e;
-    color: #c8c8f0;
-  `}
+  ${({ $active }) =>
+    $active &&
+    css`
+      background: #2a2a3e;
+      color: #c8c8f0;
+    `}
 `;
 
 export const Main = styled.main`
@@ -93,12 +99,21 @@ export const GenerateBtn = styled.button`
   gap: 8px;
   justify-content: center;
   padding: 11px 16px;
-  transition: filter 0.15s, transform 0.1s;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
   width: 100%;
 
-  &:hover:not(:disabled) { filter: brightness(1.1); }
-  &:active:not(:disabled) { transform: scale(0.98); }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 export const AbortBtn = styled.button`
@@ -114,7 +129,9 @@ export const AbortBtn = styled.button`
   width: 100%;
   transition: background 0.15s;
 
-  &:hover { background: #381e1e; }
+  &:hover {
+    background: #381e1e;
+  }
 `;
 
 const spin = keyframes`to { transform: rotate(360deg); }`;
@@ -135,13 +152,25 @@ export const StatusMessage = styled.div<{ $type: 'error' | 'success' | 'loading'
   padding: 9px 12px;
   line-height: 1.4;
 
-  ${({ $type }) => $type === 'error' && css`
-    background: #2a1020; border: 1px solid #4a1a30; color: #f08090;
-  `}
-  ${({ $type }) => $type === 'success' && css`
-    background: #102a18; border: 1px solid #1a4a28; color: #60d080;
-  `}
-  ${({ $type }) => $type === 'loading' && css`
-    background: #10152a; border: 1px solid #1a2050; color: #8090e0;
-  `}
+  ${({ $type }) =>
+    $type === 'error' &&
+    css`
+      background: #2a1020;
+      border: 1px solid #4a1a30;
+      color: #f08090;
+    `}
+  ${({ $type }) =>
+    $type === 'success' &&
+    css`
+      background: #102a18;
+      border: 1px solid #1a4a28;
+      color: #60d080;
+    `}
+  ${({ $type }) =>
+    $type === 'loading' &&
+    css`
+      background: #10152a;
+      border: 1px solid #1a2050;
+      color: #8090e0;
+    `}
 `;

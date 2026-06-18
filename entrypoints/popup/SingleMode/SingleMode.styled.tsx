@@ -35,8 +35,12 @@ export const Textarea = styled.textarea`
   transition: border-color 0.15s;
   width: 100%;
 
-  &::placeholder { color: #444456; }
-  &:focus { border-color: #4f46e5; }
+  &::placeholder {
+    color: #444456;
+  }
+  &:focus {
+    border-color: #4f46e5;
+  }
 `;
 
 export const Dropzone = styled.div<{ $dragging?: boolean; $hasImage?: boolean }>`
@@ -45,7 +49,9 @@ export const Dropzone = styled.div<{ $dragging?: boolean; $hasImage?: boolean }>
   border-radius: 10px;
   cursor: pointer;
   min-height: 90px;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,11 +62,13 @@ export const Dropzone = styled.div<{ $dragging?: boolean; $hasImage?: boolean }>
     border-style: solid;
   }
 
-  ${({ $dragging }) => $dragging && css`
-    background: #1d1d28;
-    border-color: #4f46e5;
-    border-style: solid;
-  `}
+  ${({ $dragging }) =>
+    $dragging &&
+    css`
+      background: #1d1d28;
+      border-color: #4f46e5;
+      border-style: solid;
+    `}
 `;
 
 export const DropzoneHint = styled.div`
@@ -71,8 +79,14 @@ export const DropzoneHint = styled.div`
   color: #4a4a62;
   padding: 16px;
 
-  span { font-size: 13px; color: #666688; }
-  small { font-size: 11px; color: #3a3a52; }
+  span {
+    font-size: 13px;
+    color: #666688;
+  }
+  small {
+    font-size: 11px;
+    color: #3a3a52;
+  }
 `;
 
 export const ImagePreview = styled.div`
@@ -119,7 +133,10 @@ export const RemoveBtn = styled.button`
   justify-content: center;
   transition: background 0.15s;
 
-  &:hover { background: #3a3a50; color: #e8e8f0; }
+  &:hover {
+    background: #3a3a50;
+    color: #e8e8f0;
+  }
 `;
 
 export const HiddenInput = styled.input`

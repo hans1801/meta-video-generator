@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import type { BatchStatus } from '../../lib/types';
+import { Actions } from '../../lib/types';
+import type { BatchStatus, BatchStatusMessage } from '../../lib/types';
 import { openHandleDB } from './utils';
 import SingleMode from './SingleMode/SingleMode';
 import BatchMode from './BatchMode/BatchMode';
@@ -33,46 +34,69 @@ export default function App() {
       const writable = await fh.createWritable();
       await writable.write(blob);
       await writable.close();
-      browser.runtime.sendMessage({ action: 'write_done', sceneNumber: pw.sceneNumber }).catch(() => {});
-    } catch { /* write failed, batch stays on pendingWrite */ }
+      browser.runtime
+        .sendMessage({ action: Actions.WriteDone, sceneNumber: pw.sceneNumber })
+        .catch(() => {});
+    } catch {
+      /* write failed, batch stays on pendingWrite */
+    }
   }
 
   useEffect(() => {
     (async () => {
       try {
         const db = await openHandleDB();
-        const handle = await new Promise<FileSystemDirectoryHandle | null>(res => {
+        const handle = await new Promise<FileSystemDirectoryHandle | null>((res) => {
           const tx = db.transaction('handles', 'readonly');
           const req = tx.objectStore('handles').get('projectDir');
-          req.onsuccess = () => { db.close(); res(req.result ?? null); };
-          req.onerror = () => { db.close(); res(null); };
+          req.onsuccess = () => {
+            db.close();
+            res(req.result ?? null);
+          };
+          req.onerror = () => {
+            db.close();
+            res(null);
+          };
         });
         if (handle) {
-          const perm = await (handle as FileSystemDirectoryHandle & {
-            requestPermission(opts: { mode: string }): Promise<string>;
-          }).requestPermission({ mode: 'readwrite' });
+          const perm = await (
+            handle as FileSystemDirectoryHandle & {
+              requestPermission(opts: { mode: string }): Promise<string>;
+            }
+          ).requestPermission({ mode: 'readwrite' });
           if (perm === 'granted') grantedHandleRef.current = handle;
         }
-      } catch { /* no stored handle or permission denied */ }
+      } catch {
+        /* no stored handle or permission denied */
+      }
 
       try {
-        const s = await browser.runtime.sendMessage({ action: 'get_batch_status' }) as BatchStatus | null;
+        const s = (await browser.runtime.sendMessage({
+          action: Actions.GetBatchStatus,
+        })) as BatchStatus | null;
         if (s) {
           setBatchStatus(s);
           if (s.active) setMode('project');
           if (s.pendingWrite) processWrite(s.pendingWrite);
         }
-      } catch { /* background not available */ }
+      } catch {
+        /* background not available */
+      }
     })();
 
-    const listener = (msg: { action: string; status: BatchStatus }) => {
-      if (msg.action !== 'batch_status') return;
+    const listener = (msg: BatchStatusMessage) => {
+      if (msg.action !== Actions.BatchStatus) return;
       setBatchStatus(msg.status);
       const pw = msg.status?.pendingWrite;
       if (pw) processWrite(pw);
     };
-    browser.runtime.onMessage.addListener(listener as Parameters<typeof browser.runtime.onMessage.addListener>[0]);
-    return () => browser.runtime.onMessage.removeListener(listener as Parameters<typeof browser.runtime.onMessage.addListener>[0]);
+    browser.runtime.onMessage.addListener(
+      listener as Parameters<typeof browser.runtime.onMessage.addListener>[0]
+    );
+    return () =>
+      browser.runtime.onMessage.removeListener(
+        listener as Parameters<typeof browser.runtime.onMessage.addListener>[0]
+      );
   }, []);
 
   return (
@@ -84,9 +108,22 @@ export default function App() {
             <HeaderLogo>
               <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                 <circle cx="12" cy="12" r="10" fill="url(#hgrad)" />
-                <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M8 12l3 3 5-5"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
                 <defs>
-                  <linearGradient id="hgrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                  <linearGradient
+                    id="hgrad"
+                    x1="0"
+                    y1="0"
+                    x2="24"
+                    y2="24"
+                    gradientUnits="userSpaceOnUse"
+                  >
                     <stop offset="0%" stopColor="#6366f1" />
                     <stop offset="100%" stopColor="#3b82f6" />
                   </linearGradient>
@@ -106,7 +143,9 @@ export default function App() {
         </Header>
 
         {mode === 'single' && <SingleMode />}
-        {mode === 'project' && <BatchMode batchStatus={batchStatus} grantedHandleRef={grantedHandleRef} />}
+        {mode === 'project' && (
+          <BatchMode batchStatus={batchStatus} grantedHandleRef={grantedHandleRef} />
+        )}
 
         <Footer>v{browser.runtime.getManifest().version}</Footer>
       </AppContainer>

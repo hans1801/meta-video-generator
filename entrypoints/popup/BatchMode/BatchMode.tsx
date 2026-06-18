@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Actions, SceneStatuses } from '../../../lib/types';
-import type { BatchStatus, SceneInput } from '../../../lib/types';
+import type { BatchStatus, SceneInput, SceneStatus } from '../../../lib/types';
 import { storeProjectHandle, fileToDataUrl } from '../utils';
 import {
   ProjectDirs,
@@ -31,6 +31,31 @@ import {
 declare function showDirectoryPicker(options?: {
   mode?: 'read' | 'readwrite';
 }): Promise<FileSystemDirectoryHandle>;
+
+function sceneIcon(s?: SceneStatus): string {
+  if (s === SceneStatuses.Processing) return '⏳';
+  if (s === SceneStatuses.Done) return '✓';
+  if (s === SceneStatuses.Error) return '✗';
+  return '·';
+}
+
+function StatusSceneGrid({
+  sceneNumbers,
+  sceneStatuses,
+}: {
+  sceneNumbers: number[];
+  sceneStatuses: Record<number, SceneStatus>;
+}) {
+  return (
+    <SceneGrid>
+      {sceneNumbers.map((n) => (
+        <SceneCell key={n} title={`Escena ${n}`} $status={sceneStatuses[n]}>
+          {sceneIcon(sceneStatuses[n])}
+        </SceneCell>
+      ))}
+    </SceneGrid>
+  );
+}
 
 interface SceneData {
   scene_number: number;
@@ -174,19 +199,10 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
           </ProgressLabel>
         </ProgressBarWrap>
 
-        <SceneGrid>
-          {batchStatus!.sceneNumbers.map((n) => (
-            <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus!.sceneStatuses[n]}>
-              {batchStatus!.sceneStatuses[n] === SceneStatuses.Processing
-                ? '⏳'
-                : batchStatus!.sceneStatuses[n] === SceneStatuses.Done
-                  ? '✓'
-                  : batchStatus!.sceneStatuses[n] === SceneStatuses.Error
-                    ? '✗'
-                    : '·'}
-            </SceneCell>
-          ))}
-        </SceneGrid>
+        <StatusSceneGrid
+          sceneNumbers={batchStatus!.sceneNumbers}
+          sceneStatuses={batchStatus!.sceneStatuses}
+        />
 
         <AbortBtn onClick={stopBatch}>■ Detener batch</AbortBtn>
         <BatchNote>El batch corre en background — puedes cerrar el popup.</BatchNote>
@@ -240,19 +256,10 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
           <LastBatchLabel>
             Último: {batchStatus.projectName} · {doneCount}/{batchStatus.totalScenes} completados
           </LastBatchLabel>
-          <SceneGrid>
-            {batchStatus.sceneNumbers.map((n) => (
-              <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus.sceneStatuses[n]}>
-                {batchStatus.sceneStatuses[n] === SceneStatuses.Processing
-                  ? '⏳'
-                  : batchStatus.sceneStatuses[n] === SceneStatuses.Done
-                    ? '✓'
-                    : batchStatus.sceneStatuses[n] === SceneStatuses.Error
-                      ? '✗'
-                      : '·'}
-              </SceneCell>
-            ))}
-          </SceneGrid>
+          <StatusSceneGrid
+            sceneNumbers={batchStatus.sceneNumbers}
+            sceneStatuses={batchStatus.sceneStatuses}
+          />
         </LastBatchDivider>
       )}
 

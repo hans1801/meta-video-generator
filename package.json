@@ -16,11 +16,13 @@
   },
   "dependencies": {
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "styled-components": "^6.4.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/styled-components": "^5.1.36",
     "@wxt-dev/module-react": "^1.1.5",
     "typescript": "^5.9.3",
     "wxt": "^0.20.26"

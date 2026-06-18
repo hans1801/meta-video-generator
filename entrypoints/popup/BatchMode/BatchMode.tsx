@@ -1,6 +1,24 @@
 import { useState } from 'react';
-import type { BatchStatus, SceneStatus } from '../../lib/types';
-import { storeProjectHandle, fileToDataUrl } from './utils';
+import type { BatchStatus } from '../../../lib/types';
+import { storeProjectHandle, fileToDataUrl } from '../utils';
+import { Main, GenerateBtn, Spinner, AbortBtn, StatusMessage } from '../App.styled';
+import {
+  ProjectHeader,
+  ProjectInfo,
+  ProjectTitle,
+  ProjectCount,
+  ProgressBarWrap,
+  ProgressBarTrack,
+  ProgressBarFill,
+  ProgressLabel,
+  SceneGrid,
+  SceneCell,
+  FolderSelectBtn,
+  ScenesCount,
+  LastBatchDivider,
+  LastBatchLabel,
+  BatchNote,
+} from './BatchMode.styled';
 
 declare function showDirectoryPicker(options?: { mode?: 'read' | 'readwrite' }): Promise<FileSystemDirectoryHandle>;
 
@@ -23,24 +41,6 @@ function buildMetaPrompt(scene: SceneData): string {
   const { video_prompt: vid } = scene;
   const clean = (s?: string) => s?.replace(/\.$/, '').trim() ?? '';
   return `Animate this image. ${clean(vid.motion)} ${clean(vid.camera_movement)}`;
-}
-
-function sceneIcon(s?: SceneStatus) {
-  if (s === 'processing') return '⏳';
-  if (s === 'done') return '✓';
-  if (s === 'error') return '✗';
-  return '·';
-}
-
-function sceneStyle(s?: SceneStatus): React.CSSProperties {
-  return {
-    width: 22, height: 22, fontSize: 11, fontWeight: 'bold',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4,
-    background: s === 'done' ? '#1a4028' : s === 'error' ? '#3a1020' : s === 'processing' ? '#2a2a10' : '#1e1e2e',
-    color: s === 'done' ? '#60d080' : s === 'error' ? '#f08090' : s === 'processing' ? '#e0c060' : '#55556a',
-    border: '1px solid transparent',
-    borderColor: s === 'done' ? '#1a5035' : s === 'error' ? '#4a1a30' : s === 'processing' ? '#3a3a10' : '#2a2a3a',
-  };
 }
 
 interface Props {
@@ -117,93 +117,84 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
 
   if (isBatchActive) {
     return (
-      <main className="main">
-        <div className="project-header">
-          <div className="project-info">
-            <span className="project-title">{batchStatus!.projectName}</span>
-            <span className="project-count">
+      <Main>
+        <ProjectHeader>
+          <ProjectInfo>
+            <ProjectTitle>{batchStatus!.projectName}</ProjectTitle>
+            <ProjectCount>
               Escena {batchStatus!.currentIndex + 1} / {batchStatus!.totalScenes} · {doneCount} listas
-            </span>
-          </div>
-        </div>
+            </ProjectCount>
+          </ProjectInfo>
+        </ProjectHeader>
 
-        <div className="progress-bar-wrap">
-          <div className="progress-bar-track">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${(doneCount / batchStatus!.totalScenes) * 100}%` }}
-            />
-          </div>
-          <span className="progress-label">{doneCount}/{batchStatus!.totalScenes}</span>
-        </div>
+        <ProgressBarWrap>
+          <ProgressBarTrack>
+            <ProgressBarFill $pct={(doneCount / batchStatus!.totalScenes) * 100} />
+          </ProgressBarTrack>
+          <ProgressLabel>{doneCount}/{batchStatus!.totalScenes}</ProgressLabel>
+        </ProgressBarWrap>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <SceneGrid>
           {batchStatus!.sceneNumbers.map(n => (
-            <div key={n} title={`Escena ${n}`} style={sceneStyle(batchStatus!.sceneStatuses[n])}>
-              {sceneIcon(batchStatus!.sceneStatuses[n])}
-            </div>
+            <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus!.sceneStatuses[n]}>
+              {batchStatus!.sceneStatuses[n] === 'processing' ? '⏳'
+                : batchStatus!.sceneStatuses[n] === 'done' ? '✓'
+                : batchStatus!.sceneStatuses[n] === 'error' ? '✗'
+                : '·'}
+            </SceneCell>
           ))}
-        </div>
+        </SceneGrid>
 
-        <button className="abort-btn" onClick={stopBatch}>■ Detener batch</button>
-        <p style={{ fontSize: 11, color: '#55556a', lineHeight: 1.4 }}>
-          El batch corre en background — puedes cerrar el popup.
-        </p>
-      </main>
+        <AbortBtn onClick={stopBatch}>■ Detener batch</AbortBtn>
+        <BatchNote>El batch corre en background — puedes cerrar el popup.</BatchNote>
+      </Main>
     );
   }
 
   return (
-    <main className="main">
-      <button
-        onClick={selectFolder}
-        disabled={loadingImages}
-        style={{
-          padding: '10px 12px', borderRadius: 8, border: '1px solid #2a2a3a',
-          cursor: 'pointer', background: '#17171f', textAlign: 'left', fontSize: 13,
-          color: '#c8c8e0', width: '100%',
-        }}
-      >
+    <Main>
+      <FolderSelectBtn onClick={selectFolder} disabled={loadingImages}>
         {projectHandle ? `📁 ${projectName}` : '📂 Seleccionar carpeta de proyecto'}
-      </button>
+      </FolderSelectBtn>
 
       {batchScenes.length > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8888a8' }}>
-            {batchScenes.length} escenas listas
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <ScenesCount>{batchScenes.length} escenas listas</ScenesCount>
+          <SceneGrid>
             {batchScenes.map(s => (
-              <div key={s.scene_number} title={`Escena ${s.scene_number}`} style={sceneStyle()}>·</div>
+              <SceneCell key={s.scene_number} title={`Escena ${s.scene_number}`}>·</SceneCell>
             ))}
-          </div>
-          <button className="generate-btn" onClick={startBatch} disabled={loadingImages}>
-            {loadingImages ? <span className="spinner" /> : (
+          </SceneGrid>
+          <GenerateBtn onClick={startBatch} disabled={loadingImages}>
+            {loadingImages ? <Spinner /> : (
               <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
                 <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
               </svg>
             )}
             {loadingImages ? 'Cargando imágenes...' : `▶ Iniciar batch (${batchScenes.length} escenas)`}
-          </button>
+          </GenerateBtn>
         </>
       )}
 
       {batchStatus && !batchStatus.active && batchStatus.totalScenes > 0 && (
-        <div style={{ borderTop: '1px solid #1e1e2e', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, color: '#55556a' }}>
+        <LastBatchDivider>
+          <LastBatchLabel>
             Último: {batchStatus.projectName} · {doneCount}/{batchStatus.totalScenes} completados
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          </LastBatchLabel>
+          <SceneGrid>
             {batchStatus.sceneNumbers.map(n => (
-              <div key={n} title={`Escena ${n}`} style={sceneStyle(batchStatus.sceneStatuses[n])}>
-                {sceneIcon(batchStatus.sceneStatuses[n])}
-              </div>
+              <SceneCell key={n} title={`Escena ${n}`} $status={batchStatus.sceneStatuses[n]}>
+                {batchStatus.sceneStatuses[n] === 'processing' ? '⏳'
+                  : batchStatus.sceneStatuses[n] === 'done' ? '✓'
+                  : batchStatus.sceneStatuses[n] === 'error' ? '✗'
+                  : '·'}
+              </SceneCell>
             ))}
-          </div>
-        </div>
+          </SceneGrid>
+        </LastBatchDivider>
       )}
 
-      {setupStatus && <div className="status status-error">{setupStatus}</div>}
-    </main>
+      {setupStatus && <StatusMessage $type="error">{setupStatus}</StatusMessage>}
+    </Main>
   );
 }

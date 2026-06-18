@@ -1,9 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import type { BatchStatus } from '../../lib/types';
 import { openHandleDB } from './utils';
-import SingleMode from './SingleMode';
-import BatchMode from './BatchMode';
-import './App.css';
+import SingleMode from './SingleMode/SingleMode';
+import BatchMode from './BatchMode/BatchMode';
+import {
+  GlobalStyle,
+  AppContainer,
+  Header,
+  HeaderTop,
+  HeaderLogo,
+  ModeTabs,
+  ModeTab,
+  Footer,
+} from './App.styled';
 
 type Mode = 'single' | 'project';
 
@@ -67,39 +76,40 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="header-top">
-          <div className="header-logo">
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-              <circle cx="12" cy="12" r="10" fill="url(#hgrad)" />
-              <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <defs>
-                <linearGradient id="hgrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#3b82f6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span>Meta AI Video</span>
-          </div>
-          <div className="mode-tabs">
-            <button className={`mode-tab ${mode === 'single' ? 'active' : ''}`} onClick={() => setMode('single')}>
-              Escena única
-            </button>
-            <button className={`mode-tab ${mode === 'project' ? 'active' : ''}`} onClick={() => setMode('project')}>
-              Proyecto
-            </button>
-          </div>
-        </div>
-      </header>
+    <>
+      <GlobalStyle />
+      <AppContainer>
+        <Header>
+          <HeaderTop>
+            <HeaderLogo>
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <circle cx="12" cy="12" r="10" fill="url(#hgrad)" />
+                <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <defs>
+                  <linearGradient id="hgrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#3b82f6" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <span>Meta AI Video</span>
+            </HeaderLogo>
+            <ModeTabs>
+              <ModeTab $active={mode === 'single'} onClick={() => setMode('single')}>
+                Escena única
+              </ModeTab>
+              <ModeTab $active={mode === 'project'} onClick={() => setMode('project')}>
+                Proyecto
+              </ModeTab>
+            </ModeTabs>
+          </HeaderTop>
+        </Header>
 
-      {mode === 'single' && <SingleMode />}
-      {mode === 'project' && <BatchMode batchStatus={batchStatus} grantedHandleRef={grantedHandleRef} />}
+        {mode === 'single' && <SingleMode />}
+        {mode === 'project' && <BatchMode batchStatus={batchStatus} grantedHandleRef={grantedHandleRef} />}
 
-      <footer style={{ textAlign: 'center', fontSize: 10, color: '#35354a', paddingBottom: 8 }}>
-        v{browser.runtime.getManifest().version}
-      </footer>
-    </div>
+        <Footer>v{browser.runtime.getManifest().version}</Footer>
+      </AppContainer>
+    </>
   );
 }

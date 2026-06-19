@@ -18,6 +18,16 @@ export async function storeProjectHandle(handle: FileSystemDirectoryHandle) {
   db.close();
 }
 
+export async function loadProjectHandle(): Promise<FileSystemDirectoryHandle | null> {
+  const db = await openHandleDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction('handles', 'readonly');
+    const req = tx.objectStore('handles').get('projectDir');
+    req.onsuccess = () => { db.close(); resolve(req.result ?? null); };
+    req.onerror = () => { db.close(); resolve(null); };
+  });
+}
+
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

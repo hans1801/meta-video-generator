@@ -196,7 +196,7 @@ function StatusSceneGrid({
   return (
     <SceneGrid>
       {sceneNumbers.map((n) => (
-        <SceneCell key={n} title={`Escena ${n}`} $status={sceneStatuses[n]}>
+        <SceneCell key={n} title={`Escena ${String(n).padStart(4, '0')}`} $status={sceneStatuses[n]}>
           {SCENE_ICONS[sceneStatuses[n]] ?? '·'}
         </SceneCell>
       ))}
@@ -296,7 +296,7 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
             <ProjectTitle>{batchStatus!.projectName}</ProjectTitle>
             <ProjectCount>
               {batchStatus!.mode === BatchModes.Image ? '🖼 Imágenes · ' : '🎬 Videos · '}
-              Escena {batchStatus!.currentIndex + 1} / {batchStatus!.totalScenes} · {doneCount} listas
+              Escena {String(batchStatus!.currentIndex + 1).padStart(4, '0')} / {batchStatus!.totalScenes} · {doneCount} listas
             </ProjectCount>
           </ProjectInfo>
         </ProjectHeader>
@@ -340,7 +340,7 @@ export default function BatchMode({ batchStatus, grantedHandleRef }: Props) {
             {batchScenes.map((s) => (
               <SceneCell
                 key={s.scene_number}
-                title={`Escena ${s.scene_number}`}
+                title={`Escena ${String(s.scene_number).padStart(4, '0')}`}
                 $status={completedScenes.has(s.scene_number) ? SceneStatuses.Done : undefined}
               >
                 {completedScenes.has(s.scene_number) ? '✓' : '·'}

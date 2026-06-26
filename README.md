@@ -5,16 +5,16 @@ This project is a Chrome extension developed with [WXT](https://wxt.dev/) and Re
 ## Prerequisites
 
 - Node.js
-- npm or pnpm
+- npm
 
 ## Installation
 
-Install the project dependencies by running:
+Clone the repo and install dependencies:
 
 ```bash
+git clone https://github.com/hans1801/meta-video-generator.git
+cd meta-video-generator
 npm install
-# or
-pnpm install
 ```
 
 ## Development Mode (Dev)
@@ -23,8 +23,6 @@ To run the project in development mode and see changes in real-time, simply run:
 
 ```bash
 npm run dev
-# or
-pnpm run dev
 ```
 
 **What does this command do?**
@@ -41,8 +39,6 @@ If you want to compile the final version of the extension or install it in your 
 
    ```bash
    npm run build
-   # or
-   pnpm run build
    ```
 
 2. This will generate a folder named `.output/chrome-mv3` (or similar) in the root of your project.

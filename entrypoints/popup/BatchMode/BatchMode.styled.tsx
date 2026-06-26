@@ -152,3 +152,32 @@ export const BatchNote = styled.p`
   color: #55556a;
   line-height: 1.4;
 `;
+
+export const BatchTypeTabs = styled.div`
+  display: flex;
+  gap: 4px;
+`;
+
+export const BatchTypeTab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  ${({ $active }) =>
+    $active
+      ? css`
+          background: #4f46e5;
+          color: #fff;
+        `
+      : css`
+          background: #1e1e2e;
+          color: #8888a8;
+          &:hover {
+            background: #252535;
+          }
+        `}
+`;

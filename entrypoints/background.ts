@@ -1,17 +1,19 @@
-import { Actions, SceneStatuses } from '../lib/types';
-import type { SceneStatus, BatchStatus, SceneInput, ExtensionMessage } from '../lib/types';
+import { Actions, SceneStatuses, BatchModes } from '../lib/types';
+import { Alarms } from '../lib/constants';
+import type { BatchMode, PendingWrite, SceneStatus, BatchStatus, SceneInput, ExtensionMessage } from '../lib/types';
 
 export type { BatchStatus };
 
 interface BatchState {
   active: boolean;
+  mode: BatchMode;
   projectName: string;
   scenes: SceneInput[];
   allSceneNumbers: number[];
   currentIndex: number;
   sceneStatuses: Record<number, SceneStatus>;
   metaAiTabId: number;
-  pendingWrite: { sceneNumber: number; url: string } | null;
+  pendingWrite: PendingWrite | null;
 }
 
 let batch: BatchState | null = null;
@@ -35,6 +37,7 @@ function getStatus(): BatchStatus | null {
   if (!batch) return null;
   return {
     active: batch.active,
+    mode: batch.mode,
     projectName: batch.projectName,
     currentIndex: batch.currentIndex,
     totalScenes: batch.allSceneNumbers.length,
@@ -61,24 +64,25 @@ async function processScene(index: number) {
   batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Processing;
   broadcastStatus();
 
-  await browser.alarms.clear('scene_timeout');
-  browser.alarms.create('scene_timeout', { delayInMinutes: 7 });
+  await browser.alarms.clear(Alarms.SceneTimeout);
+  browser.alarms.create(Alarms.SceneTimeout, { delayInMinutes: 7 });
 
   try {
     const response = await browser.tabs.sendMessage(batch.metaAiTabId, {
       action: Actions.FillPrompt,
-      prompt: scene.videoPrompt,
-      imageData: scene.imageBase64,
-      fileName: scene.imageName,
+      prompt: scene.kind === BatchModes.Image ? scene.imagePrompt : scene.videoPrompt,
+      imageData: scene.kind === BatchModes.Image ? null : scene.imageBase64,
+      fileName: scene.kind === BatchModes.Image ? null : scene.imageName,
       sceneNumber: scene.sceneNumber,
       projectName: batch.projectName,
+      mediaType: scene.kind,
     });
 
     if (!response?.success) {
       throw new Error(response?.error ?? 'fill_prompt failed');
     }
   } catch {
-    await browser.alarms.clear('scene_timeout');
+    await browser.alarms.clear(Alarms.SceneTimeout);
     if (batch) {
       batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Error;
       broadcastStatus();
@@ -90,7 +94,7 @@ async function processScene(index: number) {
   }
 }
 
-function advanceAfterWrite(sceneNumber: number) {
+function advanceAfterPendingWrite(sceneNumber: number) {
   if (!batch) return;
   batch.pendingWrite = null;
   batch.sceneStatuses[sceneNumber] = SceneStatuses.Done;
@@ -110,6 +114,7 @@ export default defineBackground(() => {
 
       batch = {
         active: true,
+        mode: message.mode,
         projectName: message.projectName,
         scenes: message.scenes,
         allSceneNumbers: [...preCompleted, ...message.scenes.map((s) => s.sceneNumber)].sort(
@@ -127,7 +132,7 @@ export default defineBackground(() => {
 
     if (message.action === Actions.StopBatch) {
       if (batch) batch.active = false;
-      browser.alarms.clear('scene_timeout');
+      browser.alarms.clear(Alarms.SceneTimeout);
       broadcastStatus();
       sendResponse({ ok: true });
       return false;
@@ -140,10 +145,19 @@ export default defineBackground(() => {
 
     if (message.action === Actions.DownloadVideoDirect) {
       const { url, sceneNumber } = message;
-      browser.alarms.clear('scene_timeout');
-
+      browser.alarms.clear(Alarms.SceneTimeout);
       if (batch && batch.active) {
-        batch.pendingWrite = { sceneNumber, url };
+        batch.pendingWrite = { kind: BatchModes.Video, sceneNumber, url };
+        broadcastStatus();
+      }
+      return false;
+    }
+
+    if (message.action === Actions.DownloadImagesDirect) {
+      const { urls, sceneNumber } = message;
+      browser.alarms.clear(Alarms.SceneTimeout);
+      if (batch && batch.active) {
+        batch.pendingWrite = { kind: BatchModes.Image, sceneNumber, urls };
         broadcastStatus();
       }
       return false;
@@ -151,8 +165,16 @@ export default defineBackground(() => {
 
     if (message.action === Actions.WriteDone) {
       const { sceneNumber } = message;
-      if (batch?.pendingWrite?.sceneNumber === sceneNumber) {
-        advanceAfterWrite(sceneNumber);
+      if (batch?.pendingWrite?.kind === BatchModes.Video && batch.pendingWrite.sceneNumber === sceneNumber) {
+        advanceAfterPendingWrite(sceneNumber);
+      }
+      return false;
+    }
+
+    if (message.action === Actions.WriteDoneImages) {
+      const { sceneNumber } = message;
+      if (batch?.pendingWrite?.kind === BatchModes.Image && batch.pendingWrite.sceneNumber === sceneNumber) {
+        advanceAfterPendingWrite(sceneNumber);
       }
       return false;
     }
@@ -161,7 +183,7 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'scene_timeout' && batch?.active) {
+    if (alarm.name === Alarms.SceneTimeout && batch?.active) {
       const scene = batch.scenes[batch.currentIndex];
       if (scene && batch.sceneStatuses[scene.sceneNumber] === SceneStatuses.Processing) {
         batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Error;

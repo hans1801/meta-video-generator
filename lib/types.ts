@@ -4,9 +4,18 @@ export const Actions = {
   StopBatch: 'stop_batch',
   GetBatchStatus: 'get_batch_status',
   DownloadVideoDirect: 'download_video_direct',
+  DownloadImagesDirect: 'download_images_direct',
   WriteDone: 'write_done',
+  WriteDoneImages: 'write_done_images',
   BatchStatus: 'batch_status',
 } as const;
+
+export const BatchModes = {
+  Video: 'video',
+  Image: 'image',
+} as const;
+
+export type BatchMode = (typeof BatchModes)[keyof typeof BatchModes];
 
 export const SceneStatuses = {
   Pending: 'pending',
@@ -17,21 +26,23 @@ export const SceneStatuses = {
 
 export type SceneStatus = (typeof SceneStatuses)[keyof typeof SceneStatuses];
 
-export interface SceneInput {
-  sceneNumber: number;
-  imageBase64: string;
-  imageName: string;
-  videoPrompt: string;
-}
+export type SceneInput =
+  | { kind: typeof BatchModes.Video; sceneNumber: number; imageBase64: string; imageName: string; videoPrompt: string }
+  | { kind: typeof BatchModes.Image; sceneNumber: number; imagePrompt: string };
+
+export type PendingWrite =
+  | { kind: typeof BatchModes.Video; sceneNumber: number; url: string }
+  | { kind: typeof BatchModes.Image; sceneNumber: number; urls: string[] };
 
 export interface BatchStatus {
   active: boolean;
+  mode: BatchMode;
   projectName: string;
   currentIndex: number;
   totalScenes: number;
   sceneNumbers: number[];
   sceneStatuses: Record<number, SceneStatus>;
-  pendingWrite: { sceneNumber: number; url: string } | null;
+  pendingWrite: PendingWrite | null;
 }
 
 // ── Message contracts ─────────────────────────────────────────────────────────
@@ -43,6 +54,7 @@ export interface FillPromptMessage {
   fileName: string | null;
   sceneNumber?: number;
   projectName?: string;
+  mediaType?: BatchMode;
 }
 
 export interface StartBatchMessage {
@@ -51,6 +63,7 @@ export interface StartBatchMessage {
   scenes: SceneInput[];
   metaAiTabId: number;
   preCompletedSceneNumbers: number[];
+  mode: BatchMode;
 }
 
 export interface StopBatchMessage {
@@ -68,8 +81,20 @@ export interface DownloadVideoDirectMessage {
   projectName: string;
 }
 
+export interface DownloadImagesDirectMessage {
+  action: typeof Actions.DownloadImagesDirect;
+  urls: string[];
+  sceneNumber: number;
+  projectName: string;
+}
+
 export interface WriteDoneMessage {
   action: typeof Actions.WriteDone;
+  sceneNumber: number;
+}
+
+export interface WriteDoneImagesMessage {
+  action: typeof Actions.WriteDoneImages;
   sceneNumber: number;
 }
 
@@ -84,7 +109,9 @@ export type ExtensionMessage =
   | StopBatchMessage
   | GetBatchStatusMessage
   | DownloadVideoDirectMessage
+  | DownloadImagesDirectMessage
   | WriteDoneMessage
+  | WriteDoneImagesMessage
   | BatchStatusMessage;
 
 // ── Response contracts ────────────────────────────────────────────────────────

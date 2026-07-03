@@ -25,6 +25,18 @@ async function writeBlobToFile(dir: FileSystemDirectoryHandle, name: string, blo
   await writable.close();
 }
 
+const FETCH_TIMEOUT_MS = 60000;
+
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default function App() {
   const [mode, setMode] = useState<Mode>('single');
   const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
@@ -34,7 +46,7 @@ export default function App() {
     const handle = grantedHandleRef.current;
     if (!handle) return;
     try {
-      const resp = await fetch(pw.url);
+      const resp = await fetchWithTimeout(pw.url);
       if (!resp.ok) return;
       const videosDir = await handle.getDirectoryHandle(ProjectDirs.Videos, { create: true });
       await writeBlobToFile(videosDir, sceneVideoName(pw.sceneNumber), await resp.blob());
@@ -51,7 +63,7 @@ export default function App() {
 
       const blobs = await Promise.all(
         pw.urls.map(async (url, i) => {
-          const resp = await fetch(url);
+          const resp = await fetchWithTimeout(url);
           if (!resp.ok) return null;
           const blob = await resp.blob();
           await writeBlobToFile(sceneDir, sceneGeneratedImageName(i), blob);

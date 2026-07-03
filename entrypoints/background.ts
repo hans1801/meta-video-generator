@@ -146,6 +146,7 @@ export default defineBackground(() => {
     if (message.action === Actions.DownloadVideoDirect) {
       const { url, sceneNumber } = message;
       browser.alarms.clear(Alarms.SceneTimeout);
+      browser.alarms.create(Alarms.SceneTimeout, { delayInMinutes: 2 });
       if (batch && batch.active) {
         batch.pendingWrite = { kind: BatchModes.Video, sceneNumber, url };
         broadcastStatus();
@@ -156,6 +157,7 @@ export default defineBackground(() => {
     if (message.action === Actions.DownloadImagesDirect) {
       const { urls, sceneNumber } = message;
       browser.alarms.clear(Alarms.SceneTimeout);
+      browser.alarms.create(Alarms.SceneTimeout, { delayInMinutes: 2 });
       if (batch && batch.active) {
         batch.pendingWrite = { kind: BatchModes.Image, sceneNumber, urls };
         broadcastStatus();
@@ -166,6 +168,7 @@ export default defineBackground(() => {
     if (message.action === Actions.WriteDone) {
       const { sceneNumber } = message;
       if (batch?.pendingWrite?.kind === BatchModes.Video && batch.pendingWrite.sceneNumber === sceneNumber) {
+        browser.alarms.clear(Alarms.SceneTimeout);
         advanceAfterPendingWrite(sceneNumber);
       }
       return false;
@@ -174,6 +177,7 @@ export default defineBackground(() => {
     if (message.action === Actions.WriteDoneImages) {
       const { sceneNumber } = message;
       if (batch?.pendingWrite?.kind === BatchModes.Image && batch.pendingWrite.sceneNumber === sceneNumber) {
+        browser.alarms.clear(Alarms.SceneTimeout);
         advanceAfterPendingWrite(sceneNumber);
       }
       return false;
@@ -187,6 +191,7 @@ export default defineBackground(() => {
       const scene = batch.scenes[batch.currentIndex];
       if (scene && batch.sceneStatuses[scene.sceneNumber] === SceneStatuses.Processing) {
         batch.sceneStatuses[scene.sceneNumber] = SceneStatuses.Error;
+        batch.pendingWrite = null;
         broadcastStatus();
         const nextIdx = batch.currentIndex + 1;
         setTimeout(() => {

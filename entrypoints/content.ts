@@ -55,10 +55,12 @@ function pollForVideos(
   const interval = setInterval(async () => {
     attempts++;
     const current = getVideos();
-    if (current.length > initialCount) {
+    const newEls = current.length > initialCount ? Array.from(current).slice(initialCount) : [];
+    const allReady = newEls.length > 0 && newEls.every((el) => (el as HTMLVideoElement).readyState >= 2);
+    if (allReady) {
       clearInterval(interval);
-      for (let i = 0; i < current.length - initialCount; i++) {
-        const el = current[i] as HTMLVideoElement;
+      for (const videoEl of newEls) {
+        const el = videoEl as HTMLVideoElement;
         const url =
           el.src ||
           el.closest('[data-testid="generated-video"]')?.getAttribute('data-video-url') ||
@@ -91,12 +93,13 @@ function pollForImages(
   const interval = setInterval(async () => {
     attempts++;
     const current = getImages();
-    if (current.length >= initialCount + 4) {
+    const newImgs = current.length >= initialCount + 4 ? Array.from(current).slice(0, 4) as HTMLImageElement[] : [];
+    const allReady = newImgs.length === 4 && newImgs.every((img) => img.complete && img.naturalWidth > 0);
+    if (allReady) {
       clearInterval(interval);
       const urls: string[] = [];
-      for (let i = 0; i < 4; i++) {
-        const img = current[i] as HTMLImageElement;
-        if (img?.src) urls.push(img.src);
+      for (const img of newImgs) {
+        if (img.src) urls.push(img.src);
       }
       if (urls.length > 0) {
         await browser.runtime.sendMessage({

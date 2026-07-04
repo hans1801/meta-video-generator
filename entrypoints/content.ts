@@ -56,7 +56,13 @@ function pollForVideos(
     attempts++;
     const current = getVideos();
     const newEls = current.length > initialCount ? Array.from(current).slice(initialCount) : [];
-    const allReady = newEls.length > 0 && newEls.every((el) => (el as HTMLVideoElement).readyState >= 2);
+    const allReady =
+      newEls.length > 0 &&
+      newEls.every(
+        (el) =>
+          (el as HTMLVideoElement).readyState >= 2 ||
+          !!el.closest('[data-testid="generated-video"]')?.getAttribute('data-video-url')
+      );
     if (allReady) {
       clearInterval(interval);
       for (const videoEl of newEls) {

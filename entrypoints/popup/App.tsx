@@ -26,6 +26,8 @@ async function writeBlobToFile(dir: FileSystemDirectoryHandle, name: string, blo
 }
 
 const FETCH_TIMEOUT_MS = 60000;
+const FETCH_RETRIES = 3;
+const RETRY_BACKOFF_MS = [1000, 2000, 4000];
 
 async function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController();
@@ -37,6 +39,19 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchBlobWithRetry(url: string): Promise<Blob | null> {
+  for (let attempt = 0; attempt < FETCH_RETRIES; attempt++) {
+    try {
+      const resp = await fetchWithTimeout(url);
+      if (resp.ok) return await resp.blob();
+    } catch { /* network error or timeout, retry below */ }
+    if (attempt < FETCH_RETRIES - 1) await sleep(RETRY_BACKOFF_MS[attempt]);
+  }
+  return null;
+}
+
 export default function App() {
   const [mode, setMode] = useState<Mode>('single');
   const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
@@ -46,10 +61,10 @@ export default function App() {
     const handle = grantedHandleRef.current;
     if (!handle) return;
     try {
-      const resp = await fetchWithTimeout(pw.url);
-      if (!resp.ok) return;
+      const blob = await fetchBlobWithRetry(pw.url);
+      if (!blob) return;
       const videosDir = await handle.getDirectoryHandle(ProjectDirs.Videos, { create: true });
-      await writeBlobToFile(videosDir, sceneVideoName(pw.sceneNumber), await resp.blob());
+      await writeBlobToFile(videosDir, sceneVideoName(pw.sceneNumber), blob);
       browser.runtime.sendMessage({ action: Actions.WriteDone, sceneNumber: pw.sceneNumber }).catch(() => {});
     } catch { /* write failed, batch stays on pendingWrite */ }
   }
@@ -63,9 +78,8 @@ export default function App() {
 
       const blobs = await Promise.all(
         pw.urls.map(async (url, i) => {
-          const resp = await fetchWithTimeout(url);
-          if (!resp.ok) return null;
-          const blob = await resp.blob();
+          const blob = await fetchBlobWithRetry(url);
+          if (!blob) return null;
           await writeBlobToFile(sceneDir, sceneGeneratedImageName(i), blob);
           return blob;
         })

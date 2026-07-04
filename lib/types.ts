@@ -5,6 +5,7 @@ export const Actions = {
   GetBatchStatus: 'get_batch_status',
   DownloadVideoDirect: 'download_video_direct',
   DownloadImagesDirect: 'download_images_direct',
+  DownloadVideoBrowser: 'download_video_browser',
   WriteDone: 'write_done',
   WriteDoneImages: 'write_done_images',
   BatchStatus: 'batch_status',
@@ -18,7 +19,6 @@ export const BatchModes = {
 export type BatchMode = (typeof BatchModes)[keyof typeof BatchModes];
 
 export const SceneStatuses = {
-  Pending: 'pending',
   Processing: 'processing',
   Done: 'done',
   Error: 'error',
@@ -53,7 +53,6 @@ export interface FillPromptMessage {
   imageData: string | null;
   fileName: string | null;
   sceneNumber?: number;
-  projectName?: string;
   mediaType?: BatchMode;
 }
 
@@ -78,14 +77,17 @@ export interface DownloadVideoDirectMessage {
   action: typeof Actions.DownloadVideoDirect;
   url: string;
   sceneNumber: number;
-  projectName: string;
 }
 
 export interface DownloadImagesDirectMessage {
   action: typeof Actions.DownloadImagesDirect;
   urls: string[];
   sceneNumber: number;
-  projectName: string;
+}
+
+export interface DownloadVideoBrowserMessage {
+  action: typeof Actions.DownloadVideoBrowser;
+  url: string;
 }
 
 export interface WriteDoneMessage {
@@ -110,6 +112,7 @@ export type ExtensionMessage =
   | GetBatchStatusMessage
   | DownloadVideoDirectMessage
   | DownloadImagesDirectMessage
+  | DownloadVideoBrowserMessage
   | WriteDoneMessage
   | WriteDoneImagesMessage
   | BatchStatusMessage;
